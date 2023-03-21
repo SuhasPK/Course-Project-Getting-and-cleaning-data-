@@ -13,5 +13,5 @@ The R code should have these 5 outcomes:
 4. Appropriately labels the data set with descriptive variable names. 
 5. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
 
-Once the data set is downloaded, the data set are in a zip file. In order to obtain the data set, unzip it.
+Once the data set is downloaded, the data sets are in a zip file. In order to obtain the data set, unzip it.
 The rest of the steps can be understood in **run_analysis.R** file.

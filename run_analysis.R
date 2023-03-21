@@ -1,3 +1,5 @@
+library(data.table)
+library(tidyverse)
 
 # define the path of the project directory
 pathdata = file.path(getwd(),"UCI HAR Dataset")
@@ -5,68 +7,81 @@ pathdata = file.path(getwd(),"UCI HAR Dataset")
 files = list.files(pathdata, recursive = TRUE)
 files
 
+#the feature and activity data-set
+featureNames <- read.table("UCI HAR Dataset/features.txt")
+activityLabels <- read.table("UCI HAR Dataset/activity_labels.txt", header = FALSE)
 
-# The objective here is to make the test and train data as per the sequence stated above.
-# Four basic level data sets will be defined and created:
-# 1. test dataset
-# 2. train dataset
-# 3. features dataset
-# 4. activity labels dataset
+#the train data-set
+subjectTrain <- read.table("UCI HAR Dataset/train/subject_train.txt", header = FALSE)
+y_Train <- read.table("UCI HAR Dataset/train/y_train.txt", header = FALSE)
+x_Train <- read.table("UCI HAR Dataset/train/X_train.txt", header = FALSE)
 
-# 1.Reading training tables - xtrain, ytrain, subject train
-xtrain <- read.table(file.path(pathdata,"train","X_train.txt"), header=FALSE)
-ytrain <- read.table(file.path(pathdata,"train","y_train.txt"), header=FALSE)
-subject_train <- read.table(file.path(pathdata,"train","subject_train.txt"), header = FALSE)
+#the test data-set
+subjectTest <- read.table("UCI HAR Dataset/test/subject_test.txt", header = FALSE)
+y_Test <- read.table("UCI HAR Dataset/test/y_test.txt", header = FALSE)
+x_Test <- read.table("UCI HAR Dataset/test/X_test.txt", header = FALSE)
 
-# 2.Reading testing tables xtest, ytest, subject_test
-xtest <- read.table(file.path(pathdata,"test","X_test.txt"), header = FALSE)
-ytest <- read.table(file.path(pathdata,"test","y_test.txt"), header = FALSE)
-subject_test <- read.table(file.path(pathdata,"test","subject_test.txt"), header = FALSE)
+# merging data-sets
+subject <- rbind(subjectTrain, subjectTest)
+activity <- rbind(y_Train, y_Test)
+features <- rbind(x_Train, x_Test)
 
-# 3.Read the features data
-features <- read.table(file.path(pathdata,"features.txt"), header = FALSE)
+# appropriate nomenclature for the columns
+colnames(features) <- featureNames[,2]
 
-# 4.Read activity labels data
-activityLabels <- read.table(file.path(pathdata,"activity_labels.txt"), header = FALSE)
+colnames(activity) <- "Activity"
+colnames(subject) <- "Subject"
+completeData <- cbind(features,activity,subject)
+View(completeData)
 
-## Uses descriptive activity names to name the activities in the data set.
-# Create Sanity and Column Values to the Train Data.
-colnames(xtrain) <-features[,2]
-colnames(ytrain) <-"activityId" 
-colnames(subject_train) <- "subjectId"
+# extracting only the measurements on the mean and standard deviation for each measurement.
+columnsWithMeanSTD <- grep(".*Mean.*|.*Std.*", names(completeData), ignore.case=TRUE)
+View(columnsWithMeanSTD)
+requiredColumns <- c(columnsWithMeanSTD, 562, 563)
+dim(completeData)
 
-# Create Sanity and Column Values to the Test Data.
-colnames(xtest) <- features[,2]
-colnames(ytest) <- "activityId"
-colnames(subject_test) <- "subjectId"
+extractedData <- completeData[,requiredColumns]
+dim(extractedData)
 
-#Create Sanity and Column Values to the activity label Data.
-colnames(activityLabels) <- c('activityId','activityType')
+# this gives numbers from 1 to 6.
+extractedData$Activity
 
-## MERGING TEST AND TRAIN DATA
-merge_train <- cbind(ytrain,subject_train,xtrain)
-merger_test <- cbind(ytest,subject_test,xtest)
-# Create the main data table merging both tables.
-setAllInOne <- rbind(merge_train,merger_test)
+# this gives the activity name based on numbers assigned.
+extractedData$Activity <- as.character(extractedData$Activity)
+for (i in 1:6){
+    extractedData$Activity[extractedData$Activity == i] <- as.character(activityLabels[i,2])
+}
+# check now
+extractedData$Activity
 
-## Extracting only the measurements on the mean and standard deviation for each measurement.
-# read all the values that are available.
-colNames <- colnames(setAllInOne)
-# Need to get a subset of all the mean and standards and the correspondongin activityID and subjectID.
-mean_and_std = (grepl("activityId" , colNames) | grepl("subjectId" , colNames) | grepl("mean.." , colNames) | grepl("std.." , colNames))
-#A subtset has to be created to get the required dataset
-setForMeanAndStd <- setAllInOne[ , mean_and_std == TRUE]
+extractedData$Activity <- as.factor(extractedData$Activity)
 
-## Use descriptive activity names to name the activities in the data set.
-setWithActivityNames = merge(setForMeanAndStd, activityLabels, by='activityId', all.x=TRUE)
-View(setWithActivityNames)
+names(extractedData)
 
-## Creates a second, independent tidy data set with the average of each variable for each activity and each subject.
-# Get the average of each variable for each activity.
-secTidySet <- aggregate(. ~subjectId + activityId, setWithActivityNames, mean)
-View(secTidySet)
-secTidySet <- secTidySet[order(secTidySet$subjectId, secTidySet$activityId),]
-View(secTidySet)
+# Thought of making this in a loop but this made more sense.
+names(extractedData)<-gsub("Acc", "Accelerometer", names(extractedData))
+names(extractedData)<-gsub("Gyro", "Gyroscope", names(extractedData))
+names(extractedData)<-gsub("BodyBody", "Body", names(extractedData))
+names(extractedData)<-gsub("Mag", "Magnitude", names(extractedData))
+names(extractedData)<-gsub("^t", "Time", names(extractedData))
+names(extractedData)<-gsub("^f", "Frequency", names(extractedData))
+names(extractedData)<-gsub("tBody", "TimeBody", names(extractedData))
+names(extractedData)<-gsub("-mean()", "Mean", names(extractedData), ignore.case = TRUE)
+names(extractedData)<-gsub("-std()", "STD", names(extractedData), ignore.case = TRUE)
+names(extractedData)<-gsub("-freq()", "Frequency", names(extractedData), ignore.case = TRUE)
+names(extractedData)<-gsub("angle", "Angle", names(extractedData))
+names(extractedData)<-gsub("gravity", "Gravity", names(extractedData))
 
-## Saving the new data
-write.table(secTidySet, "secTidySet.txt", row.name=FALSE)
+
+names(extractedData)
+
+extractedData$Subject <- as.factor(extractedData$Subject)
+extractedData <- data.table(extractedData)
+
+# creating a new tidy data-set and saving it.
+tidyData <- aggregate(. ~Subject + Activity, extractedData, mean)
+tidyData <- tidyData[order(tidyData$Subject,tidyData$Activity),]
+View(tidyData)
+write.table(tidyData, file = "Tidy.txt", row.names = FALSE)
+
+

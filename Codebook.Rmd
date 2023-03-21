@@ -14,7 +14,7 @@ The run_analysis.R script prepare and download the data and then follows the ste
 
     Dataset is Downloaded and extracted under the folder called UCI HAR Dataset
 
-    Assigns each data to variables:
+    -> Assigns each data to variables:
     1. features <- features.txt (from the accelerometer and gyroscope 3-axial raw signals tAcc-XYZ and tGyro-XYZ.) 
     2. activities <- activity_labels.txt (List of activities performed when the corresponding measurements were taken and its labels) 
     3. subject_test <- test/subject_test.txt (test data of 9/30 volunteer test subjects)
@@ -24,12 +24,44 @@ The run_analysis.R script prepare and download the data and then follows the ste
     7. x_train <- test/X_train.txt (features train data) 
     8. y_train <- test/y_train.txt (train data of activities’ID labels)
 
-    Merges the traing and test sets using rbind() and cbind() to create one dataset
+    -> Merges the traing and test sets using rbind() and cbind() to create one dataset
+        subject <- rbind(subjectTrain, subjectTest)
+        activity <- rbind(y_Train, y_Test)
+        features <- rbind(x_Train, x_Test)
+        
+    -> From the new dataset extracts only the mean and standard devaition for each measurement.
+    colnames(features) <- featureNames[,2]
+    colnames(activity) <- "Activity"
+    colnames(subject) <- "Subject"
+    completeData <- cbind(features,activity,subject)
+    View(completeData)
+    columnsWithMeanSTD <- grep(".*Mean.*|.*Std.*", names(completeData), ignore.case=TRUE)
+    View(columnsWithMeanSTD))
 
-    From the new dataset extracts only the mean and standard devaition for each measurement
-
-    Descriptive activity names to name the activities in dataset and Replace the labels with descriptive names and correct the typos
-
-    From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject TidyData is created
+    -> Descriptive activity names to name the activities in dataset and Replace the labels with descriptive names and correct the typos
+    names(extractedData)<-gsub("Acc", "Accelerometer", names(extractedData))
+    names(extractedData)<-gsub("Gyro", "Gyroscope", names(extractedData))
+    names(extractedData)<-gsub("BodyBody", "Body", names(extractedData))
+    names(extractedData)<-gsub("Mag", "Magnitude", names(extractedData))
+    names(extractedData)<-gsub("^t", "Time", names(extractedData))
+    names(extractedData)<-gsub("^f", "Frequency", names(extractedData))
+    names(extractedData)<-gsub("tBody", "TimeBody", names(extractedData))
+    names(extractedData)<-gsub("-mean()", "Mean", names(extractedData), ignore.case = TRUE)
+    names(extractedData)<-gsub("-std()", "STD", names(extractedData), ignore.case = TRUE)
+    names(extractedData)<-gsub("-freq()", "Frequency", names(extractedData), ignore.case = TRUE)
+    names(extractedData)<-gsub("angle", "Angle", names(extractedData))
+    names(extractedData)<-gsub("gravity", "Gravity", names(extractedData))
+    
+    
+    names(extractedData)
+    
+    extractedData$Subject <- as.factor(extractedData$Subject)
+    extractedData <- data.table(extractedData)
+    
+    -> From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject TidyData is created
+    tidyData <- aggregate(. ~Subject + Activity, extractedData, mean)
+    tidyData <- tidyData[order(tidyData$Subject,tidyData$Activity),]
+    View(tidyData)
+    write.table(tidyData, file = "Tidy.txt", row.names = FALSE)
 
 
